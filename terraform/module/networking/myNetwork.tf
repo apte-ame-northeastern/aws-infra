@@ -4,7 +4,7 @@ locals {
 }
 
 resource "aws_vpc" "ameya" {
-cidr_block = var.cidr
+  cidr_block = var.cidr
 
   tags = {
     Name = "My VPC"
