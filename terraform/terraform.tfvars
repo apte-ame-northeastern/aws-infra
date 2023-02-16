@@ -1,4 +1,4 @@
-cidr           = "10.0.0.0/16"
+cidr           = "10.0.0.0/8"
 vpc_count      = "1"
 priv_sub_count = "3"
 pub_sub_count  = "3"
