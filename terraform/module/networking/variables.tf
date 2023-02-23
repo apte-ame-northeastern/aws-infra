@@ -34,4 +34,58 @@ variable "environment" {
   //default     = "dev"
 }
 
+variable "destination_cidr" {
+  type        = string
+  description = "The destination CIDR for public subnet"
+  # default     = "0.0.0.0/0"
+}
+
+variable "ingress_cidr" {
+  type        = string
+  description = "CIDR for ingress"
+  default     = "0.0.0.0/0"
+}
+
+variable "public_key_loc" {
+  type        = string
+  description = "Location of public key"
+  default     = "C:\\Users\\AMEYA A\\.ssh\\ec2.pub"
+}
+
+variable "my_ami_id" {
+  type        = string
+  description = "Enter your custom AMI ID"
+}
+
+variable "instance_type" {
+  type        = string
+  description = "Enter Instance Type"
+  default     = "t2.micro"
+}
+
+variable "delete_on_termination" {
+  type    = bool
+  default = true
+}
+
+variable "volume_size" {
+  type    = number
+  default = 50
+}
+
+variable "volume_type" {
+  type    = string
+  default = "gp2"
+}
+
+variable "disable_api_termination" {
+  type    = bool
+  default = false
+}
+
+variable "app_port" {
+  type    = number
+  default = 8080
+}
+
 data "aws_availability_zones" "azs" {}
