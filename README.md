@@ -27,6 +27,10 @@ Created a terraform file structure to provision resources on AWS. These resource
 **f.** A private route table and attached it to all private subnets.
 
 **g.** A public route in public route table with the destination CIDR block as `0.0.0.0/0` and the internet gateway created above as the target.
+
+**h.** A security group with inbound rules for ports 22, 443, 80, 8080
+
+**i** An EC2 instance created using existing ami-id
 ## Important terraform commands
 
 **1.** terraform fmt
