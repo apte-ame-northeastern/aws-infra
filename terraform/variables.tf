@@ -34,11 +34,6 @@ variable "environment" {
   //default     = "dev"
 }
 
-variable "destination_cidr" {
-  type        = string
-  description = "The destination CIDR for public subnet"
-  # default     = "0.0.0.0/0"
-}
 
 variable "ingress_cidr" {
   type        = string
