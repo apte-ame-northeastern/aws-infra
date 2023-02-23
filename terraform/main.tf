@@ -13,7 +13,7 @@ module "myNetwork" {
   region         = var.region
   environment    = var.environment
 
-  destination_cidr        = var.destination_cidr
+  
   ingress_cidr            = var.ingress_cidr
   public_key_loc          = var.public_key_loc
   my_ami_id               = var.my_ami_id
