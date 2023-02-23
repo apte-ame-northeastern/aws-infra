@@ -13,5 +13,16 @@ module "myNetwork" {
   region         = var.region
   environment    = var.environment
 
+  destination_cidr        = var.destination_cidr
+  ingress_cidr            = var.ingress_cidr
+  public_key_loc          = var.public_key_loc
+  my_ami_id               = var.my_ami_id
+  instance_type           = var.instance_type
+  delete_on_termination   = var.delete_on_termination
+  volume_size             = var.volume_size
+  volume_type             = var.volume_type
+  disable_api_termination = var.disable_api_termination
+  app_port                = var.app_port
+
 }
 

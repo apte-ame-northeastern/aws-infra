@@ -116,3 +116,89 @@ resource "aws_route_table_association" "ameya_priv_rt_association" {
   ]
 }
 
+resource "aws_security_group" "application" {
+  name   = "application"
+  vpc_id = aws_vpc.ameya.id
+
+  #Incoming traffic
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.ingress_cidr]
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = [var.ingress_cidr]
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [var.ingress_cidr]
+  }
+
+  ingress {
+    from_port   = var.app_port
+    to_port     = var.app_port
+    protocol    = "tcp"
+    cidr_blocks = [var.ingress_cidr]
+  }
+
+  #Outgoing traffic
+  egress {
+    from_port   = 0
+    protocol    = "-1"
+    to_port     = 0
+    cidr_blocks = [var.ingress_cidr]
+  }
+  tags = {
+    Name = "application"
+  }
+
+  depends_on = [
+    aws_vpc.ameya
+  ]
+}
+
+resource "aws_key_pair" "ameya_ec2_key" {
+  key_name   = "ameya_ec2_key"
+  public_key = file(var.public_key_loc)
+
+  depends_on = [
+    aws_vpc.ameya
+  ]
+}
+
+resource "aws_instance" "ameya_aws" {
+  ami                         = var.my_ami_id
+  instance_type               = var.instance_type
+  key_name                    = aws_key_pair.ameya_ec2_key.key_name
+  subnet_id                   = aws_subnet.ameya_public_subnet[0].id
+  associate_public_ip_address = true
+
+  #   security_groups = ["application_security_group"]
+  vpc_security_group_ids = [aws_security_group.application.id]
+
+  disable_api_termination = var.disable_api_termination
+  root_block_device {
+    volume_size           = var.volume_size
+    volume_type           = var.volume_type
+    delete_on_termination = var.delete_on_termination
+  }
+
+  tags = {
+    Name = "EC2 Instance ${timestamp()}"
+  }
+
+  depends_on = [
+    aws_subnet.ameya_public_subnet,
+    aws_security_group.application
+  ]
+
+}
+
