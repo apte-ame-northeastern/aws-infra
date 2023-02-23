@@ -9,6 +9,11 @@ resource "aws_vpc" "ameya" {
   tags = {
     Name = "My VPC"
   }
+
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
+
 }
 
 resource "aws_subnet" "ameya_private_subnet" {
