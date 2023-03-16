@@ -275,9 +275,9 @@ resource "aws_security_group" "database" {
 
 
   ingress {
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
+    from_port = 3306
+    to_port   = 3306
+    protocol  = "tcp"
     # cidr_blocks     = [var.ingress_cidr]
     security_groups = [aws_security_group.application.id]
   }
@@ -499,7 +499,7 @@ output "public_ip" {
 
 
 data "aws_route53_zone" "ameya_main" {
-  name = var.my_domain_name
+  name         = var.my_domain_name
   private_zone = false
 }
 
