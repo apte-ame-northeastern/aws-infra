@@ -251,10 +251,10 @@ resource "aws_db_instance" "mysql_db" {
   engine_version       = "8.0"
   instance_class       = "db.t3.micro"
   allocated_storage    = 10
-  username             = "csye6225"
-  password             = "Abcde12345"
+  username             = var.db_username
+  password             = var.db_password
   db_subnet_group_name = aws_db_subnet_group.my_db_subnet.name
-  db_name              = "csye6225"
+  db_name              = var.db_name
   multi_az             = false
   # security_group_names = aws_security_group.database.name
   vpc_security_group_ids = [aws_security_group.database.id]
@@ -278,16 +278,16 @@ resource "aws_security_group" "database" {
     from_port       = 3306
     to_port         = 3306
     protocol        = "tcp"
-    cidr_blocks     = [var.ingress_cidr]
+    # cidr_blocks     = [var.ingress_cidr]
     security_groups = [aws_security_group.application.id]
   }
-  egress {
-    from_port       = 0
-    protocol        = "-1"
-    to_port         = 0
-    cidr_blocks     = [var.ingress_cidr]
-    security_groups = [aws_security_group.application.id]
-  }
+  # egress {
+  #   from_port       = 0
+  #   protocol        = "-1"
+  #   to_port         = 0
+  #   # cidr_blocks     = [var.ingress_cidr]
+  #   security_groups = [aws_security_group.application.id]
+  # }
   tags = {
     Name = "database"
   }
@@ -489,3 +489,34 @@ resource "aws_iam_instance_profile" "my_instance_profile" {
     aws_iam_role.EC2-CSYE6225
   ]
 }
+
+
+
+
+output "public_ip" {
+  value = aws_instance.ameya_aws.public_ip
+}
+
+
+data "aws_route53_zone" "ameya_main" {
+  name = var.my_domain_name
+  private_zone = false
+}
+
+resource "aws_route53_record" "my_web" {
+  name    = var.my_domain_name
+  type    = "A"
+  zone_id = data.aws_route53_zone.ameya_main.zone_id
+
+  ttl = var.ttl
+
+  depends_on = [
+    aws_instance.ameya_aws,
+    data.aws_route53_zone.ameya_main
+  ]
+
+  records = [
+    aws_instance.ameya_aws.public_ip,
+  ]
+}
+

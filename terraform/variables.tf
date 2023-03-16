@@ -83,4 +83,24 @@ variable "app_port" {
   default = 8080
 }
 
+variable "my_domain_name" {
+  type = string
+}
+
+variable "db_username" {
+  type = string
+}
+
+variable "db_password" {
+  type = string
+}
+
+variable "db_name" {
+  type = string
+}
+
+variable "ttl" {
+  type = number
+}
+
 data "aws_availability_zones" "azs" {}
