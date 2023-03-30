@@ -207,7 +207,7 @@ sudo sh -c "echo 'AWS_BUCKET_NAME=${aws_s3_bucket.my_image_bucket.bucket}' >> /e
 
 sudo systemctl start app2.service
 sudo systemctl enable app2.service
-
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/cloudwatch-config.json
 
 EOF
   iam_instance_profile = aws_iam_instance_profile.my_instance_profile.id
