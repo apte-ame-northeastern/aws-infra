@@ -406,11 +406,12 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "mySecurity" {
 resource "aws_iam_role" "EC2-CSYE6225" {
   name                = "EC2-CSYE6225"
   assume_role_policy  = data.aws_iam_policy_document.instance_assume_role_policy.json
-  managed_policy_arns = [aws_iam_policy.WebAppS3.arn]
+  managed_policy_arns = [aws_iam_policy.WebAppS3.arn,aws_iam_policy.cloudwatch_agent_policy.arn]
 
   depends_on = [
     data.aws_iam_policy_document.instance_assume_role_policy,
-    aws_iam_policy.WebAppS3
+    aws_iam_policy.WebAppS3,
+    aws_iam_policy.cloudwatch_agent_policy
   ]
 }
 
@@ -518,5 +519,24 @@ resource "aws_route53_record" "my_web" {
   records = [
     aws_instance.ameya_aws.public_ip,
   ]
+}
+
+resource "aws_iam_policy" "cloudwatch_agent_policy" {
+  name = "CloudWatchAgentPolicy"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "cloudwatch:PutMetricData",
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Effect   = "Allow"
+        Resource = ["*"]
+      },
+    ]
+  })
 }
 
