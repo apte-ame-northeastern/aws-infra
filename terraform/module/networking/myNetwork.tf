@@ -130,36 +130,38 @@ resource "aws_security_group" "application" {
   name   = "application"
   vpc_id = aws_vpc.ameya.id
 
-  #Incoming traffic
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [var.ingress_cidr]
-  }
 
   ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = [var.ingress_cidr]
+    from_port = 22
+    to_port   = 22
+    protocol  = "tcp"
+    # cidr_blocks = [var.ingress_cidr]
+    security_groups = [aws_security_group.load_balancer.id]
   }
+
+  # ingress {
+  #   from_port   = 80
+  #   to_port     = 80
+  #   protocol    = "tcp"
+  #   cidr_blocks = [var.ingress_cidr]
+  # }
+
+  # ingress {
+  #   from_port   = 443
+  #   to_port     = 443
+  #   protocol    = "tcp"
+  #   cidr_blocks = [var.ingress_cidr]
+  # }
 
   ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = [var.ingress_cidr]
+    from_port = var.app_port
+    to_port   = var.app_port
+    protocol  = "tcp"
+    # cidr_blocks = [var.ingress_cidr]
+    security_groups = [aws_security_group.load_balancer.id]
   }
 
-  ingress {
-    from_port   = var.app_port
-    to_port     = var.app_port
-    protocol    = "tcp"
-    cidr_blocks = [var.ingress_cidr]
-  }
 
-  #Outgoing traffic
   egress {
     from_port   = 0
     protocol    = "-1"
@@ -171,7 +173,8 @@ resource "aws_security_group" "application" {
   }
 
   depends_on = [
-    aws_vpc.ameya
+    aws_vpc.ameya,
+    aws_security_group.load_balancer
   ]
 }
 
@@ -184,53 +187,53 @@ resource "aws_key_pair" "ameya_ec2_key" {
   ]
 }
 
-resource "aws_instance" "ameya_aws" {
-  # ami                         = var.my_ami_id
-  ami                         = data.aws_ami.recent.id
-  instance_type               = var.instance_type
-  key_name                    = aws_key_pair.ameya_ec2_key.key_name
-  subnet_id                   = aws_subnet.ameya_public_subnet[0].id
-  associate_public_ip_address = true
+# resource "aws_instance" "ameya_aws" {
+#   # ami                         = var.my_ami_id
+#   ami                         = data.aws_ami.recent.id
+#   instance_type               = var.instance_type
+#   key_name                    = aws_key_pair.ameya_ec2_key.key_name
+#   subnet_id                   = aws_subnet.ameya_public_subnet[0].id
+#   associate_public_ip_address = true
 
-  user_data            = <<EOF
+#   user_data            = <<EOF
 
-#!/bin/bash
-sudo touch /etc/systemd/system/service.env
-sudo sh -c "echo 'DB_USERNAME=${aws_db_instance.mysql_db.username}' >> /etc/systemd/system/service.env"
-sudo sh -c "echo 'DB_HOST=${aws_db_instance.mysql_db.address}' >> /etc/systemd/system/service.env"
-sudo sh -c "echo 'DB_PORT=3306' >> /etc/systemd/system/service.env"
+# #!/bin/bash
+# sudo touch /etc/systemd/system/service.env
+# sudo sh -c "echo 'DB_USERNAME=${aws_db_instance.mysql_db.username}' >> /etc/systemd/system/service.env"
+# sudo sh -c "echo 'DB_HOST=${aws_db_instance.mysql_db.address}' >> /etc/systemd/system/service.env"
+# sudo sh -c "echo 'DB_PORT=3306' >> /etc/systemd/system/service.env"
 
-sudo sh -c "echo 'DB_NAME=${aws_db_instance.mysql_db.db_name}' >> /etc/systemd/system/service.env"
-sudo sh -c "echo 'DB_PASSWORD=${aws_db_instance.mysql_db.password}' >> /etc/systemd/system/service.env"
-sudo sh -c "echo 'AWS_REGION=${var.region}' >> /etc/systemd/system/service.env"
-sudo sh -c "echo 'AWS_BUCKET_NAME=${aws_s3_bucket.my_image_bucket.bucket}' >> /etc/systemd/system/service.env"
+# sudo sh -c "echo 'DB_NAME=${aws_db_instance.mysql_db.db_name}' >> /etc/systemd/system/service.env"
+# sudo sh -c "echo 'DB_PASSWORD=${aws_db_instance.mysql_db.password}' >> /etc/systemd/system/service.env"
+# sudo sh -c "echo 'AWS_REGION=${var.region}' >> /etc/systemd/system/service.env"
+# sudo sh -c "echo 'AWS_BUCKET_NAME=${aws_s3_bucket.my_image_bucket.bucket}' >> /etc/systemd/system/service.env"
 
-sudo systemctl start app2.service
-sudo systemctl enable app2.service
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/cloudwatch-config.json
+# sudo systemctl start app2.service
+# sudo systemctl enable app2.service
+# sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/cloudwatch-config.json
 
-EOF
-  iam_instance_profile = aws_iam_instance_profile.my_instance_profile.id
-  #   security_groups = ["application_security_group"]
-  vpc_security_group_ids = [aws_security_group.application.id]
+# EOF
+#   iam_instance_profile = aws_iam_instance_profile.my_instance_profile.id
+#   #   security_groups = ["application_security_group"]
+#   vpc_security_group_ids = [aws_security_group.application.id]
 
-  disable_api_termination = var.disable_api_termination
-  root_block_device {
-    volume_size           = var.volume_size
-    volume_type           = var.volume_type
-    delete_on_termination = var.delete_on_termination
-  }
+#   disable_api_termination = var.disable_api_termination
+#   root_block_device {
+#     volume_size           = var.volume_size
+#     volume_type           = var.volume_type
+#     delete_on_termination = var.delete_on_termination
+#   }
 
-  tags = {
-    Name = "EC2 Instance ${timestamp()}"
-  }
+#   tags = {
+#     Name = "EC2 Instance ${timestamp()}"
+#   }
 
-  depends_on = [
-    aws_subnet.ameya_public_subnet,
-    aws_security_group.application
-  ]
+#   depends_on = [
+#     aws_subnet.ameya_public_subnet,
+#     aws_security_group.application
+#   ]
 
-}
+# }
 
 resource "aws_db_subnet_group" "my_db_subnet" {
   name       = "my_db_subnet"
@@ -365,7 +368,7 @@ resource "aws_s3_bucket_versioning" "versioning" {
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "versioning-bucket-config" {
-  # Must have bucket versioning enabled first
+  # Requires bucket versioning enabled first
   depends_on = [aws_s3_bucket_versioning.versioning]
 
   bucket = aws_s3_bucket.my_image_bucket.id
@@ -494,9 +497,9 @@ resource "aws_iam_instance_profile" "my_instance_profile" {
 
 
 
-output "public_ip" {
-  value = aws_instance.ameya_aws.public_ip
-}
+# output "public_ip" {
+#   value = aws_instance.ameya_aws.public_ip
+# }
 
 
 data "aws_route53_zone" "ameya_main" {
@@ -509,16 +512,22 @@ resource "aws_route53_record" "my_web" {
   type    = "A"
   zone_id = data.aws_route53_zone.ameya_main.zone_id
 
-  ttl = var.ttl
+  # ttl = var.ttl
+  alias {
+    name                   = aws_lb.ameya_lb.dns_name
+    zone_id                = aws_lb.ameya_lb.zone_id
+    evaluate_target_health = true
+  }
 
   depends_on = [
-    aws_instance.ameya_aws,
-    data.aws_route53_zone.ameya_main
+    # aws_instance.ameya_aws,
+    data.aws_route53_zone.ameya_main,
+    aws_lb.ameya_lb
   ]
 
-  records = [
-    aws_instance.ameya_aws.public_ip,
-  ]
+  # records = [
+  #   aws_instance.ameya_aws.public_ip,
+  # ]
 }
 
 resource "aws_iam_policy" "cloudwatch_agent_policy" {
@@ -539,4 +548,249 @@ resource "aws_iam_policy" "cloudwatch_agent_policy" {
     ]
   })
 }
+####
+resource "aws_security_group" "load_balancer" {
+  name   = "load_balancer"
+  vpc_id = aws_vpc.ameya.id
 
+  #Incoming traffic
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = [var.ingress_cidr]
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [var.ingress_cidr]
+  }
+
+  egress {
+    from_port   = 0
+    protocol    = "-1"
+    to_port     = 0
+    cidr_blocks = [var.ingress_cidr]
+  }
+
+  tags = {
+    Name = "load_balancer"
+  }
+
+  depends_on = [
+    aws_vpc.ameya
+  ]
+}
+
+data "template_file" "user_data" {
+
+  template = <<EOF
+
+#!/bin/bash
+sudo touch /etc/systemd/system/service.env
+sudo sh -c "echo 'DB_USERNAME=${aws_db_instance.mysql_db.username}' >> /etc/systemd/system/service.env"
+sudo sh -c "echo 'DB_HOST=${aws_db_instance.mysql_db.address}' >> /etc/systemd/system/service.env"
+sudo sh -c "echo 'DB_PORT=3306' >> /etc/systemd/system/service.env"
+
+sudo sh -c "echo 'DB_NAME=${aws_db_instance.mysql_db.db_name}' >> /etc/systemd/system/service.env"
+sudo sh -c "echo 'DB_PASSWORD=${aws_db_instance.mysql_db.password}' >> /etc/systemd/system/service.env"
+sudo sh -c "echo 'AWS_REGION=${var.region}' >> /etc/systemd/system/service.env"
+sudo sh -c "echo 'AWS_BUCKET_NAME=${aws_s3_bucket.my_image_bucket.bucket}' >> /etc/systemd/system/service.env"
+
+sudo systemctl start app2.service
+sudo systemctl enable app2.service
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/cloudwatch-config.json
+
+EOF
+
+}
+
+resource "aws_launch_template" "my_asg" {
+  image_id      = data.aws_ami.recent.id
+  instance_type = var.instance_type
+  key_name      = aws_key_pair.ameya_ec2_key.key_name
+
+  network_interfaces {
+    associate_public_ip_address = true
+    security_groups             = [aws_security_group.application.id]
+  }
+
+  # vpc_security_group_ids =  [aws_security_group.application.id]
+
+  block_device_mappings {
+    device_name = data.aws_ami.recent.root_device_name
+    ebs {
+      volume_size           = var.volume_size
+      volume_type           = var.volume_type
+      delete_on_termination = var.delete_on_termination
+    }
+  }
+
+  user_data = base64encode(data.template_file.user_data.rendered)
+
+
+  iam_instance_profile {
+    name = aws_iam_instance_profile.my_instance_profile.name
+  }
+
+  disable_api_termination = var.disable_api_termination
+
+
+  depends_on = [
+    aws_key_pair.ameya_ec2_key,
+    aws_security_group.application,
+    aws_iam_instance_profile.my_instance_profile
+  ]
+}
+
+resource "aws_autoscaling_group" "my_asg" {
+  name                = "my_asg"
+  min_size            = var.asg_min_size         #1
+  max_size            = var.asg_max_size         #3
+  desired_capacity    = var.asg_desired_capacity #1
+  default_cooldown    = var.asg_default_cooldown #60
+  vpc_zone_identifier = [for subnet in aws_subnet.ameya_public_subnet : subnet.id]
+
+  launch_template {
+    id      = aws_launch_template.my_asg.id
+    version = aws_launch_template.my_asg.latest_version
+  }
+
+  target_group_arns = [aws_lb_target_group.webapp_target_group.arn]
+
+  depends_on = [
+    aws_subnet.ameya_public_subnet,
+    aws_launch_template.my_asg,
+    aws_lb_target_group.webapp_target_group
+  ]
+}
+
+resource "aws_autoscaling_policy" "WebServerScaleUpPolicy" {
+  name                   = "WebServerScaleUpPolicy"
+  adjustment_type        = "ChangeInCapacity"
+  autoscaling_group_name = aws_autoscaling_group.my_asg.name
+  cooldown               = var.scale_up_policy_cooldown           #60
+  scaling_adjustment     = var.scale_up_policy_scaling_adjustment #1
+  depends_on = [
+    aws_autoscaling_group.my_asg
+  ]
+}
+
+resource "aws_autoscaling_policy" "WebServerScaleDownPolicy" {
+  name                   = "WebServerScaleDownPolicy"
+  adjustment_type        = "ChangeInCapacity"
+  autoscaling_group_name = aws_autoscaling_group.my_asg.name
+  cooldown               = var.scale_down_policy_cooldown           #60
+  scaling_adjustment     = var.scale_down_policy_scaling_adjustment #-1
+  depends_on = [
+    aws_autoscaling_group.my_asg
+  ]
+}
+
+resource "aws_cloudwatch_metric_alarm" "scaleDown" {
+  alarm_name          = "terraform-scaleDown"
+  comparison_operator = "LessThanOrEqualToThreshold"
+  evaluation_periods  = var.cw_metric_alarm_scaledown_evaluation_periods #"2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = var.cw_metric_alarm_scaledown_period #"60"
+  statistic           = "Average"
+  threshold           = var.cw_metric_alarm_scaledown_threshold #"3"
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.my_asg.name
+  }
+  alarm_description         = "Scale Down when average cpu is below 3%"
+  alarm_actions             = ["${aws_autoscaling_policy.WebServerScaleDownPolicy.arn}"]
+  insufficient_data_actions = []
+
+  depends_on = [
+    aws_autoscaling_policy.WebServerScaleDownPolicy,
+    aws_autoscaling_group.my_asg
+  ]
+}
+
+resource "aws_cloudwatch_metric_alarm" "scaleUp" {
+  alarm_name          = "terraform-scaleUp"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = var.cw_metric_alarm_scaleup_evaluation_periods #"2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = var.cw_metric_alarm_scaleup_period #"60"
+  statistic           = "Average"
+  threshold           = var.cw_metric_alarm_scaleup_threshold #"10"
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.my_asg.name
+  }
+  alarm_description         = "Scale Up when average cpu is above 10%"
+  alarm_actions             = ["${aws_autoscaling_policy.WebServerScaleUpPolicy.arn}"]
+  insufficient_data_actions = []
+
+  depends_on = [
+    aws_autoscaling_policy.WebServerScaleUpPolicy,
+    aws_autoscaling_group.my_asg
+  ]
+}
+
+
+resource "aws_lb" "ameya_lb" {
+  name               = "ameya-lb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.load_balancer.id]
+  subnets            = [for subnet in aws_subnet.ameya_public_subnet : subnet.id]
+
+  tags = {
+    Name = "webapp_lb"
+  }
+
+  depends_on = [
+    aws_security_group.load_balancer,
+    aws_subnet.ameya_public_subnet
+  ]
+}
+
+#Looks done
+resource "aws_lb_listener" "ameya_lb_listener" {
+  load_balancer_arn = aws_lb.ameya_lb.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.webapp_target_group.arn
+  }
+
+  depends_on = [
+    aws_lb.ameya_lb,
+    aws_lb_target_group.webapp_target_group
+  ]
+}
+
+#Looks done
+resource "aws_lb_target_group" "webapp_target_group" {
+  name_prefix = "webapp"
+  port        = 8080
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.ameya.id
+  target_type = "instance"
+
+  health_check {
+    healthy_threshold   = var.health_check_healthy_threshold   #3
+    unhealthy_threshold = var.health_check_unhealthy_threshold #5
+    timeout             = var.health_check_timeout             #5
+    interval            = var.health_check_interval            #30
+    path                = "/healthz"
+    port                = "8080"
+    matcher             = "200"
+  }
+
+  depends_on = [
+    aws_vpc.ameya
+  ]
+}
+
+resource "aws_cloudwatch_log_group" "csye6225" {
+  name = "csye6225"
+}

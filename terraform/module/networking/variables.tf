@@ -104,4 +104,76 @@ variable "ttl" {
   type = number
 }
 
+variable "asg_min_size" {
+  type = number
+}
+
+variable "asg_max_size" {
+  type = number
+}
+
+variable "asg_desired_capacity" {
+  type = number
+}
+
+variable "asg_default_cooldown" {
+  type = number
+}
+
+variable "scale_up_policy_cooldown" {
+  type = number
+}
+
+variable "scale_up_policy_scaling_adjustment" {
+  type = number
+}
+
+variable "scale_down_policy_cooldown" {
+  type = number
+}
+
+variable "scale_down_policy_scaling_adjustment" {
+  type = number
+}
+
+variable "cw_metric_alarm_scaleup_evaluation_periods" {
+  type = string
+}
+
+variable "cw_metric_alarm_scaleup_period" {
+  type = string
+}
+
+variable "cw_metric_alarm_scaleup_threshold" {
+  type = string
+}
+
+variable "cw_metric_alarm_scaledown_evaluation_periods" {
+  type = string
+}
+
+variable "cw_metric_alarm_scaledown_period" {
+  type = string
+}
+
+variable "cw_metric_alarm_scaledown_threshold" {
+  type = string
+}
+
+variable "health_check_healthy_threshold" {
+  type = number
+}
+
+variable "health_check_unhealthy_threshold" {
+  type = number
+}
+
+variable "health_check_timeout" {
+  type = number
+}
+
+variable "health_check_interval" {
+  type = number
+}
+
 data "aws_availability_zones" "azs" {}
