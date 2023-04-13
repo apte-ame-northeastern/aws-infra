@@ -47,6 +47,7 @@ module "myNetwork" {
   health_check_unhealthy_threshold             = var.health_check_unhealthy_threshold
   health_check_timeout                         = var.health_check_timeout
   health_check_interval                        = var.health_check_interval
+  certificate_arn                              = var.certificate_arn
 
 }
 

@@ -37,3 +37,4 @@ health_check_healthy_threshold = 3
 health_check_unhealthy_threshold = 5
 health_check_timeout = 5
 health_check_interval = 30
+certificate_arn = "arn:aws:acm:us-east-1:846376718339:certificate/50f1bc9d-4b7c-4aec-84db-8c033e49939a"
