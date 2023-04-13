@@ -176,4 +176,8 @@ variable "health_check_interval" {
   type = number
 }
 
+variable "certificate_arn" {
+  type = string
+}
+
 data "aws_availability_zones" "azs" {}

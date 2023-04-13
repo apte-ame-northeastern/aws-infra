@@ -265,10 +265,13 @@ resource "aws_db_instance" "mysql_db" {
   parameter_group_name   = aws_db_parameter_group.my_parameter_group.name
   apply_immediately      = true
   skip_final_snapshot    = true
+  storage_encrypted      = true
+  kms_key_id             = aws_kms_key.rds_key.arn
   depends_on = [
     aws_db_subnet_group.my_db_subnet,
     aws_db_parameter_group.my_parameter_group,
-    aws_security_group.database
+    aws_security_group.database,
+    aws_kms_key.rds_key
   ]
 }
 
@@ -553,7 +556,7 @@ resource "aws_security_group" "load_balancer" {
   name   = "load_balancer"
   vpc_id = aws_vpc.ameya.id
 
-  #Incoming traffic
+
   ingress {
     from_port   = 80
     to_port     = 80
@@ -608,6 +611,7 @@ EOF
 }
 
 resource "aws_launch_template" "my_asg" {
+  name          = "my_launch"
   image_id      = data.aws_ami.recent.id
   instance_type = var.instance_type
   key_name      = aws_key_pair.ameya_ec2_key.key_name
@@ -625,6 +629,8 @@ resource "aws_launch_template" "my_asg" {
       volume_size           = var.volume_size
       volume_type           = var.volume_type
       delete_on_termination = var.delete_on_termination
+      encrypted             = true
+      kms_key_id            = aws_kms_key.ebs_key.arn
     }
   }
 
@@ -641,7 +647,8 @@ resource "aws_launch_template" "my_asg" {
   depends_on = [
     aws_key_pair.ameya_ec2_key,
     aws_security_group.application,
-    aws_iam_instance_profile.my_instance_profile
+    aws_iam_instance_profile.my_instance_profile,
+    aws_kms_key.ebs_key
   ]
 }
 
@@ -654,8 +661,9 @@ resource "aws_autoscaling_group" "my_asg" {
   vpc_zone_identifier = [for subnet in aws_subnet.ameya_public_subnet : subnet.id]
 
   launch_template {
-    id      = aws_launch_template.my_asg.id
-    version = aws_launch_template.my_asg.latest_version
+    id = aws_launch_template.my_asg.id
+    #version = aws_launch_template.my_asg.latest_version
+    version = "$Latest"
   }
 
   target_group_arns = [aws_lb_target_group.webapp_target_group.arn]
@@ -751,12 +759,11 @@ resource "aws_lb" "ameya_lb" {
   ]
 }
 
-#Looks done
 resource "aws_lb_listener" "ameya_lb_listener" {
   load_balancer_arn = aws_lb.ameya_lb.arn
-  port              = 80
-  protocol          = "HTTP"
-
+  port              = 443
+  protocol          = "HTTPS"
+  certificate_arn   = var.certificate_arn
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.webapp_target_group.arn
@@ -768,7 +775,6 @@ resource "aws_lb_listener" "ameya_lb_listener" {
   ]
 }
 
-#Looks done
 resource "aws_lb_target_group" "webapp_target_group" {
   name_prefix = "webapp"
   port        = 8080
@@ -794,3 +800,131 @@ resource "aws_lb_target_group" "webapp_target_group" {
 resource "aws_cloudwatch_log_group" "csye6225" {
   name = "csye6225"
 }
+
+resource "aws_kms_key" "ebs_key" {
+  description              = "EBS KMS Key"
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  deletion_window_in_days  = 7
+  enable_key_rotation      = true
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "Enable IAM User Permissions"
+        Effect = "Allow"
+        Principal = {
+          AWS = "*"
+        }
+        Action = [
+          "kms:*"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow administration of the key"
+        Effect = "Allow"
+        Principal = {
+          AWS = ["arn:aws:iam::846376718339:role/aws-service-role/elasticloadbalancing.amazonaws.com/AWSServiceRoleForElasticLoadBalancing",
+          "arn:aws:iam::846376718339:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling"]
+        }
+        Action = [
+          "kms:Create*",
+          "kms:Describe*",
+          "kms:Enable*",
+          "kms:List*",
+          "kms:Put*",
+          "kms:Update*",
+          "kms:Revoke*",
+          "kms:Disable*",
+          "kms:Get*",
+          "kms:Delete*",
+          "kms:TagResource",
+          "kms:UntagResource",
+          "kms:ScheduleKeyDeletion",
+          "kms:CancelKeyDeletion"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow use of the key for EBS encryption"
+        Effect = "Allow"
+        Principal = {
+          Service = ["ec2.amazonaws.com"]
+        }
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_kms_key" "rds_key" {
+  description              = "RDS KMS Key"
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  deletion_window_in_days  = 7
+  enable_key_rotation      = true
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "Enable IAM User Permissions"
+        Effect = "Allow"
+        Principal = {
+          AWS = "*"
+        }
+        Action = [
+          "kms:*"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow administration of the key"
+        Effect = "Allow"
+        Principal = {
+          AWS = ["arn:aws:iam::846376718339:role/aws-service-role/rds.amazonaws.com/AWSServiceRoleForRDS"]
+        }
+        Action = [
+          "kms:Create*",
+          "kms:Describe*",
+          "kms:Enable*",
+          "kms:List*",
+          "kms:Put*",
+          "kms:Update*",
+          "kms:Revoke*",
+          "kms:Disable*",
+          "kms:Get*",
+          "kms:Delete*",
+          "kms:TagResource",
+          "kms:UntagResource",
+          "kms:ScheduleKeyDeletion",
+          "kms:CancelKeyDeletion"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow use of the key for RDS encryption"
+        Effect = "Allow"
+        Principal = {
+          Service = ["rds.amazonaws.com"]
+        }
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
